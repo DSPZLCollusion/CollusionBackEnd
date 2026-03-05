@@ -9,3 +9,5 @@ CREATE TABLE users
     password_salt VARCHAR NOT NULL,
     password_hash VARCHAR NOT NULL
 );
+
+CREATE INDEX idx_users_email      ON users (email);

@@ -2,8 +2,10 @@ DROP TABLE IF EXISTS roles CASCADE;
 
 CREATE TABLE roles (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    role_name VARCHAR(50)
+    role_name VARCHAR(50) UNIQUE
 );
+
+CREATE INDEX idx_roles_name      ON roles (role_name);
 
 INSERT INTO roles (role_name) VALUES
                                     ('ADMIN'),
