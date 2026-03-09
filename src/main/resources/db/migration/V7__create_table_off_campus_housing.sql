@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS off_campus_housing CASCADE;
+
 CREATE TABLE off_campus_housing (
     pnm_id BIGINT PRIMARY KEY REFERENCES pnms,
     street_address  VARCHAR(255) NOT NULL,
