@@ -1,80 +1,55 @@
 package com.collusion.api.domain.user;
 
 import com.collusion.api.dto.User.UserRequest;
-import com.collusion.api.dto.User.UserResponse;
 import com.collusion.api.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.security.SecureRandom;
+import java.util.Base64;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository UserRepository;
+    private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-   // private final PasswordEncoder passwordEncoder;
 
-    public List<UserResponse> getAllUsers() {
-        return UserRepository.findAll()
-                .stream()
-                .map(UserResponse::from)
-                .toList();
+    public UserService(UserRepository userRepository, RoleRepository roleRepository) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
     }
 
-    public UserResponse getUserById(Integer UserId) {
-        User User = UserRepository.findById(UserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + UserId));
-        return UserResponse.from(User);
-    }
-
-//    @Transactional
-//    public UserResponse createUser(UserRequest request) {
-//        if (UserRepository.existsByEmail(request.email())) {
-//            throw new IllegalArgumentException("Email already in use: " + request.email());
-//        }
-//
-//        Role role = roleRepository.findById(request.roleId())
-//                .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + request.roleId()));
-//
-//        // Salt is generated and stored separately so it can be re-used for verification
-//        String salt = generateSalt();
-//        String hash = passwordEncoder.encode(salt + request.password());
-//
-//        User User = User.builder()
-//                .firstName(request.firstName())
-//                .lastName(request.lastName())
-//                .email(request.email())
-//                .passwordSalt(salt)
-//                .passwordHash(hash)
-//                .role(role)
-//                .build();
-//
-//        return UserResponse.from(UserRepository.save(User));
-//    }
+    private static final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Transactional
-    public UserResponse updateUser(Integer UserId, UserRequest request) {
-        User User = UserRepository.findById(UserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + UserId));
+    public void createUser(UserRequest userRequest) {
+        roleRepository.findById(userRequest.roleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + userRequest.roleId()));
 
-        Role role = roleRepository.findById(request.roleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + request.roleId()));
+        // Generate a random salt
+        byte[] saltBytes = new byte[16];
+        new SecureRandom().nextBytes(saltBytes);
+        String salt = Base64.getEncoder().encodeToString(saltBytes);
 
-        User.setFirstName(request.firstName());
-        User.setLastName(request.lastName());
-        User.setEmail(request.email());
-        User.setRole(role);
+        // Hash the password combined with the salt
+        String hashedPassword = passwordEncoder.encode(userRequest.password() + salt);
 
-        return UserResponse.from(UserRepository.save(User));
+        userRepository.createUser(
+                userRequest.firstName(),
+                userRequest.lastName(),
+                userRequest.email(),
+                hashedPassword,
+                salt
+        );
     }
 
-    private String generateSalt() {
-        byte[] salt = new byte[16];
-        new java.security.SecureRandom().nextBytes(salt);
-        return java.util.Base64.getEncoder().encodeToString(salt);
+    @Transactional
+    public void assignRoleToUser(Integer userId, Integer roleId, Integer assignedBy) {
+        roleRepository.findById(roleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + roleId));
+
+        userRepository.assignRoleToUser(userId, roleId, assignedBy);
     }
 }
