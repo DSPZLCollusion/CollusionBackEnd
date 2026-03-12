@@ -91,7 +91,7 @@ BEGIN
     RETURN QUERY
     SELECT e.id, e.name, e.date
     FROM events e
-    ORDER BY e.date ASC;
+    ORDER BY e.date;
 END;
 $$;
 
@@ -110,6 +110,6 @@ BEGIN
     SELECT e.id, e.name, e.date
     FROM events e
     WHERE e.date >= CURRENT_DATE
-    ORDER BY e.date ASC;
+    ORDER BY e.date;
 END;
 $$;
