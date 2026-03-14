@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record UserRequest(
+
         @NotBlank(message = "First name is required")
         String firstName,
 
@@ -15,8 +16,6 @@ public record UserRequest(
         @NotBlank(message = "Email is required")
         String email,
 
-        // Only required on create — UserService ignores it on updates
-        // A separate PATCH /api/users/{id}/password endpoint handles password changes
         @Size(min = 8, message = "Password must be at least 8 characters")
         String password
 ) {}

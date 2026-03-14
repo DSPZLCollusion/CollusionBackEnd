@@ -2,8 +2,10 @@ services:
   postgres:
     image: 'postgres:latest'
     environment:
-      - 'POSTGRES_DB='
-      - 'POSTGRES_PASSWORD='
-      - 'POSTGRES_USER='
+      - 'POSTGRES_DB=postgres'
+      - 'POSTGRES_PASSWORD=jj29083'
+      - 'POSTGRES_USER=postgres'
     ports:
-      - '5432'
+      - '5433:5432'
+    labels:
+      org.springframework.boot.jdbc.parameters: 'ssl=true&sslmode=require'
