@@ -1,4 +1,4 @@
-package com.collusion.api.models;
+package com.collusion.api.model;
 
 public enum ERole {
     ROLE_USER,
