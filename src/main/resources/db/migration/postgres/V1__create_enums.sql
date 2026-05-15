@@ -1,20 +1,20 @@
 CREATE TYPE class_year AS ENUM (
-    'Freshman',
-    'Sophomore',
-    'Junior',
-    'Senior',
-    'Super Senior'
+    'FRESHMAN',
+    'SOPHOMORE',
+    'JUNIOR',
+    'SENIOR',
+    'SUPER_SENIOR'
     );
 
 CREATE TYPE status AS ENUM (
-    'delta',
-    'sigma',
-    'phi'
+    'DELTA',
+    'SIGMA',
+    'PHI'
     );
 
 CREATE TYPE housing_type AS ENUM (
-    'on_campus',
-    'off_campus'
+    'ON_CAMPUS',
+    'OFF_CAMPUS'
     );
 
 CREATE TYPE action_type AS ENUM (
@@ -29,16 +29,16 @@ CREATE TYPE action_type AS ENUM (
     'contact_added'
     );
 
-CREATE TYPE dorm as ENUM (
-    'Speed',
+CREATE TYPE dorm AS ENUM (
+    'SPEED',
     'BSB',
-    'Blumberg',
-    'Mees',
-    'Deming',
-    'Scharpenberg',
-    'Lakeside',
-    'Percopo',
-    'Apartments West',
-    'Apartments East',
+    'BLUMBERG',
+    'MEES',
+    'DEMING',
+    'SCHARPENBERG',
+    'LAKESIDE',
+    'PERCOPO',
+    'APARTMENTS WEST',
+    'APARTMENTS EAST',
     'TBA'
-    )
+    );
