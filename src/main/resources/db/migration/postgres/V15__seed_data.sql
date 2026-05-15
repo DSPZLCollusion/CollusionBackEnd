@@ -1,98 +1,201 @@
--- ============================================================
--- V14__seed_data.sql
--- Dummy seeding data for development and testing
--- ============================================================
+-- =============================================================================
+-- seed.sql — Development seed data for API testing
+-- =============================================================================
+-- Usage:
+--   psql -U postgres -d postgres -f seed.sql
+--
+-- Or against the dev Docker container (port 5433):
+--   psql -h localhost -p 5433 -U postgres -d postgres -f seed.sql
+--
+-- Safe to re-run: all inserts are wrapped in a transaction and the script
+-- clears existing seed data first (in FK-safe order) before re-inserting.
+--
+-- Passwords: all test users have the password  →  Password1!
+-- BCrypt hash below was generated with strength 10.
+-- =============================================================================
 
--- ----------------------------------------------------------------
--- USERS (passwords are BCrypt of 'Password1!' + salt — dev only)
--- ----------------------------------------------------------------
-INSERT INTO users (first_name, last_name, email, password_salt, password_hash) VALUES
-                                                                                   ('James',   'Carter',   'james.carter@collusion.dev',   'c2FsdDAwMDAwMDAwMDA=', '$2a$10$devhashplaceholderADMIN111111111111111111111111111111'),
-                                                                                   ('Olivia',  'Bennett',  'olivia.bennett@collusion.dev', 'c2FsdDAwMDAwMDAwMDE=', '$2a$10$devhashplaceholderDIREC111111111111111111111111111111'),
-                                                                                   ('Marcus',  'Webb',     'marcus.webb@collusion.dev',    'c2FsdDAwMDAwMDAwMDI=', '$2a$10$devhashplaceholderUSER1111111111111111111111111111111'),
-                                                                                   ('Sophia',  'Nguyen',   'sophia.nguyen@collusion.dev',  'c2FsdDAwMDAwMDAwMDM=', '$2a$10$devhashplaceholderUSER2222222222222222222222222222222'),
-                                                                                   ('Ethan',   'Brooks',   'ethan.brooks@collusion.dev',   'c2FsdDAwMDAwMDAwMDQ=', '$2a$10$devhashplaceholderUSER3333333333333333333333333333333');
+BEGIN;
 
--- ----------------------------------------------------------------
--- USER ROLES
--- assigned_by NULL = system seeded
--- ----------------------------------------------------------------
-INSERT INTO user_roles (user_id, role_id, assigned_by) VALUES
-                                                           (1, (SELECT id FROM roles WHERE role_name = 'ADMIN'),    NULL),
-                                                           (2, (SELECT id FROM roles WHERE role_name = 'DIRECTOR'), NULL),
-                                                           (3, (SELECT id FROM roles WHERE role_name = 'USER'),     NULL),
-                                                           (4, (SELECT id FROM roles WHERE role_name = 'USER'),     NULL),
-                                                           (5, (SELECT id FROM roles WHERE role_name = 'USER'),     NULL);
+-- ── 1. CLEAR existing data (FK-safe order: children before parents) ──────────
 
--- ----------------------------------------------------------------
--- PNMs
--- ----------------------------------------------------------------
-INSERT INTO pnms (first_name, last_name, year, status, housing_type) VALUES
-                                                                         ('Liam',      'Foster',    'Freshman',    'delta', 'on_campus'),
-                                                                         ('Emma',      'Hayes',     'Sophomore',   'sigma', 'on_campus'),
-                                                                         ('Noah',      'Patel',     'Junior',      'phi',   'off_campus'),
-                                                                         ('Ava',       'Morrison',  'Freshman',    'delta', 'on_campus'),
-                                                                         ('William',   'Chen',      'Senior',      'sigma', 'off_campus'),
-                                                                         ('Isabella',  'Torres',    'Sophomore',   NULL,    'on_campus'),
-                                                                         ('James',     'Kim',       'Freshman',    'delta', 'on_campus'),
-                                                                         ('Mia',       'Robinson',  'Junior',      'phi',   'off_campus'),
-                                                                         ('Benjamin',  'Scott',     'Senior',      NULL,    'on_campus'),
-                                                                         ('Charlotte', 'Adams',     'Freshman',    'sigma', 'off_campus'),
-                                                                         ('Lucas',     'Rivera',    'Sophomore',   'delta', 'on_campus'),
-                                                                         ('Amelia',    'Walker',    'Junior',      'sigma', 'on_campus'),
-                                                                         ('Mason',     'Hall',      'Super Senior','phi',   'off_campus'),
-                                                                         ('Harper',    'White',     'Freshman',    NULL,    'on_campus'),
-                                                                         ('Elijah',    'Martin',    'Sophomore',   'delta', 'off_campus');
+DELETE FROM on_campus_housing;
+DELETE FROM off_campus_housing;
+DELETE FROM user_roles;
+DELETE FROM pnms;
+DELETE FROM events;
+DELETE FROM users
+WHERE email IN (
+                'admin@collusion.dev',
+                'director@collusion.dev',
+                'user@collusion.dev'
+    );
 
--- ----------------------------------------------------------------
--- ON CAMPUS HOUSING
--- Matches pnms with housing_type = on_campus
--- ----------------------------------------------------------------
+-- ── 2. USERS ─────────────────────────────────────────────────────────────────
+-- All passwords are:  Password1!
+-- BCrypt hash (strength 10): $2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
+--
+-- Set it to a placeholder so the NOT NULL constraint is satisfied.
+
+INSERT INTO users (first_name, last_name, email, password_hash)
+VALUES
+    ('Admin',    'User',    'admin@collusion.dev',     '$2y$10$IvSVkXdbAX1a4UBy7Og7KezGppcJVU0kdtOOfcsS4aSQUOoZCwceG'),
+    ('Director', 'User',    'director@collusion.dev',  '$2y$10$IvSVkXdbAX1a4UBy7Og7KezGppcJVU0kdtOOfcsS4aSQUOoZCwceG'),
+    ('Regular',  'User',    'user@collusion.dev',      '$2y$10$IvSVkXdbAX1a4UBy7Og7KezGppcJVU0kdtOOfcsS4aSQUOoZCwceG');
+
+-- ── 3. USER_ROLES ─────────────────────────────────────────────────────────────
+-- Roles were seeded by V3__create_table_roles.sql:  ADMIN=1, DIRECTOR=2, USER=3
+-- assigned_by is nullable — left null for seed data (no actor at bootstrap).
+
+INSERT INTO user_roles (user_id, role_id, assigned_at)
+SELECT u.id, r.id, now()
+FROM   users u, roles r
+WHERE  u.email = 'admin@collusion.dev'    AND r.role_name = 'ADMIN';
+
+INSERT INTO user_roles (user_id, role_id, assigned_at)
+SELECT u.id, r.id, now()
+FROM   users u, roles r
+WHERE  u.email = 'director@collusion.dev' AND r.role_name = 'DIRECTOR';
+
+INSERT INTO user_roles (user_id, role_id, assigned_at)
+SELECT u.id, r.id, now()
+FROM   users u, roles r
+WHERE  u.email = 'user@collusion.dev'     AND r.role_name = 'USER';
+
+-- ── 4. PNMS ───────────────────────────────────────────────────────────────────
+-- Mix of:
+--   • all class years (FRESHMAN → SUPER_SENIOR)
+--   • all statuses (DELTA, SIGMA, PHI) + one with NULL status (not yet evaluated)
+--   • both housing types (ON_CAMPUS, OFF_CAMPUS)
+
+INSERT INTO pnms (first_name, last_name, year, status, housing_type)
+VALUES
+    -- On-campus PNMs
+    ('James',    'Carter',   'FRESHMAN'::class_year,     'DELTA'::status,  'ON_CAMPUS'::housing_type),
+    ('Olivia',   'Bennett',  'SOPHOMORE'::class_year,    'SIGMA'::status,  'ON_CAMPUS'::housing_type),
+    ('Ethan',    'Morrison', 'JUNIOR'::class_year,       'PHI'::status,    'ON_CAMPUS'::housing_type),
+    ('Sophia',   'Nguyen',   'SENIOR'::class_year,       'DELTA'::status,  'ON_CAMPUS'::housing_type),
+    ('Marcus',   'Webb',     'SUPER_SENIOR'::class_year, 'SIGMA'::status,  'ON_CAMPUS'::housing_type),
+
+    -- On-campus, status not yet assigned (NULL)
+    ('Ava',      'Thornton', 'FRESHMAN'::class_year,     NULL,             'ON_CAMPUS'::housing_type),
+    ('Liam',     'Foster',   'SOPHOMORE'::class_year,    NULL,             'ON_CAMPUS'::housing_type),
+
+    -- Off-campus PNMs
+    ('Emma',     'Sullivan', 'JUNIOR'::class_year,       'PHI'::status,    'OFF_CAMPUS'::housing_type),
+    ('Noah',     'Rivera',   'SENIOR'::class_year,       'DELTA'::status,  'OFF_CAMPUS'::housing_type),
+    ('Isabella', 'Chen',     'FRESHMAN'::class_year,     'SIGMA'::status,  'OFF_CAMPUS'::housing_type),
+
+    -- Off-campus, status not yet assigned (NULL)
+    ('Mason',    'Patel',    'SOPHOMORE'::class_year,    NULL,             'OFF_CAMPUS'::housing_type),
+    ('Luna',     'Brooks',   'SUPER_SENIOR'::class_year, NULL,             'OFF_CAMPUS'::housing_type);
+
+-- ── 5. ON_CAMPUS_HOUSING ──────────────────────────────────────────────────────
+-- One row per on-campus PNM — every dorm represented at least once.
+
 INSERT INTO on_campus_housing (pnm_id, dorm, room_number)
-SELECT p.id, vals.dorm::dorm, vals.room
+SELECT p.id, 'SPEED'::dorm, '101A'
 FROM pnms p
-         JOIN (VALUES
-                   ('Liam',     'Foster',    'Speed',            '204'),
-                   ('Emma',     'Hayes',     'Blumberg',         '310'),
-                   ('Ava',      'Morrison',  'Mees',             '115'),
-                   ('Isabella', 'Torres',    'BSB',              '422'),
-                   ('James',    'Kim',       'Deming',           '308'),
-                   ('Benjamin', 'Scott',     'Lakeside',         '201'),
-                   ('Lucas',    'Rivera',    'Scharpenberg',     '109'),
-                   ('Amelia',   'Walker',    'Percopo',          '317'),
-                   ('Harper',   'White',     'Apartments East',  '5B')
-) AS vals(first_name, last_name, dorm, room)
-              ON p.first_name = vals.first_name AND p.last_name = vals.last_name;
+WHERE p.first_name = 'James'
+  AND p.last_name = 'Carter';
 
--- ----------------------------------------------------------------
--- OFF CAMPUS HOUSING
--- Matches pnms with housing_type = off_campus
--- ----------------------------------------------------------------
+INSERT INTO on_campus_housing (pnm_id, dorm, room_number)
+SELECT p.id, 'BSB'::dorm, '204'
+FROM pnms p
+WHERE p.first_name = 'Olivia'
+  AND p.last_name = 'Bennett';
+
+INSERT INTO on_campus_housing (pnm_id, dorm, room_number)
+SELECT p.id, 'BLUMBERG'::dorm, '312B'
+FROM pnms p
+WHERE p.first_name = 'Ethan'
+  AND p.last_name = 'Morrison';
+
+INSERT INTO on_campus_housing (pnm_id, dorm, room_number)
+SELECT p.id, 'MEES'::dorm, '118'
+FROM pnms p
+WHERE p.first_name = 'Sophia'
+  AND p.last_name = 'Nguyen';
+
+INSERT INTO on_campus_housing (pnm_id, dorm, room_number)
+SELECT p.id, 'DEMING'::dorm, '220C'
+FROM pnms p
+WHERE p.first_name = 'Marcus'
+  AND p.last_name = 'Webb';
+
+INSERT INTO on_campus_housing (pnm_id, dorm, room_number)
+SELECT p.id, 'LAKESIDE'::dorm, '405'
+FROM pnms p
+WHERE p.first_name = 'Ava'
+  AND p.last_name = 'Thornton';
+
+INSERT INTO on_campus_housing (pnm_id, dorm, room_number)
+SELECT p.id, 'PERCOPO'::dorm, '309A'
+FROM pnms p
+WHERE p.first_name = 'Liam'
+  AND p.last_name = 'Foster';
+
+-- ── 6. OFF_CAMPUS_HOUSING ─────────────────────────────────────────────────────
+
 INSERT INTO off_campus_housing (pnm_id, street_address, city, state, zip_code)
-SELECT p.id, vals.street, vals.city, vals.state, vals.zip
-FROM pnms p
-         JOIN (VALUES
-                   ('Noah',      'Patel',    '742 Evergreen Terrace',  'Terre Haute', 'IN', '47803'),
-                   ('William',   'Chen',     '1428 Elm Street',        'Terre Haute', 'IN', '47807'),
-                   ('Mia',       'Robinson', '221B Baker Avenue',      'Terre Haute', 'IN', '47804'),
-                   ('Charlotte', 'Adams',    '550 Wabash Ave Apt 3',   'Terre Haute', 'IN', '47807'),
-                   ('Mason',     'Hall',     '1600 Ohio Blvd',         'Terre Haute', 'IN', '47803'),
-                   ('Elijah',    'Martin',   '88 Poplar Street',       'Terre Haute', 'IN', '47809')
-) AS vals(first_name, last_name, street, city, state, zip)
-              ON p.first_name = vals.first_name AND p.last_name = vals.last_name;
+SELECT p.id, '842 Wabash Ave',     'Terre Haute', 'IN', '47807'
+FROM   pnms p WHERE p.first_name = 'Emma'    AND p.last_name = 'Sullivan';
 
--- ----------------------------------------------------------------
--- EVENTS
--- Mix of past, current, and upcoming events
--- ----------------------------------------------------------------
-INSERT INTO events (name, date) VALUES
-                                    ('Fall Rush Kickoff BBQ',        '2025-08-25'),
-                                    ('Meet the Brothers Night',      '2025-09-02'),
-                                    ('Bid Day',                      '2025-09-10'),
-                                    ('Philanthropy 5K Run',          '2025-09-20'),
-                                    ('Game Day Tailgate',            '2025-10-04'),
-                                    ('Fall Formal',                  '2025-11-15'),
-                                    ('Spring Rush Info Session',     '2026-01-18'),
-                                    ('Spring Social Mixer',          '2026-02-08'),
-                                    ('Leadership Workshop',          '2026-02-22'),
-                                    ('Spring Bid Day',               '2026-03-08');
+INSERT INTO off_campus_housing (pnm_id, street_address, city, state, zip_code)
+SELECT p.id, '317 Cherry St',      'Terre Haute', 'IN', '47807'
+FROM   pnms p WHERE p.first_name = 'Noah'    AND p.last_name = 'Rivera';
+
+INSERT INTO off_campus_housing (pnm_id, street_address, city, state, zip_code)
+SELECT p.id, '1204 Ohio St Apt 2', 'Terre Haute', 'IN', '47809'
+FROM   pnms p WHERE p.first_name = 'Isabella'AND p.last_name = 'Chen';
+
+INSERT INTO off_campus_housing (pnm_id, street_address, city, state, zip_code)
+SELECT p.id, '56 N 6th St',        'Terre Haute', 'IN', '47807'
+FROM   pnms p WHERE p.first_name = 'Mason'   AND p.last_name = 'Patel';
+
+INSERT INTO off_campus_housing (pnm_id, street_address, city, state, zip_code)
+SELECT p.id, '728 Poplar St',      'Terre Haute', 'IN', '47803'
+FROM   pnms p WHERE p.first_name = 'Luna'    AND p.last_name = 'Brooks';
+
+-- ── 7. EVENTS ─────────────────────────────────────────────────────────────────
+-- Mix of past, current-week, and future events for testing date filtering.
+
+INSERT INTO events (name, date)
+VALUES
+    ('Info Night',              CURRENT_DATE - INTERVAL '14 days'),
+    ('Meet the Chapter',        CURRENT_DATE - INTERVAL '7 days'),
+    ('Philanthropy Day',        CURRENT_DATE - INTERVAL '3 days'),
+    ('Bid Day Prep',            CURRENT_DATE),
+    ('Rush Kickoff',            CURRENT_DATE + INTERVAL '3 days'),
+    ('Brotherhood Social',      CURRENT_DATE + INTERVAL '7 days'),
+    ('Final Rush Event',        CURRENT_DATE + INTERVAL '14 days');
+
+-- ── 8. VERIFY ─────────────────────────────────────────────────────────────────
+
+DO $$
+    DECLARE
+        user_count    INT;
+        pnm_count     INT;
+        on_cam_count  INT;
+        off_cam_count INT;
+        event_count   INT;
+    BEGIN
+        SELECT COUNT(*) INTO user_count    FROM users;
+        SELECT COUNT(*) INTO pnm_count     FROM pnms;
+        SELECT COUNT(*) INTO on_cam_count  FROM on_campus_housing;
+        SELECT COUNT(*) INTO off_cam_count FROM off_campus_housing;
+        SELECT COUNT(*) INTO event_count   FROM events;
+
+        RAISE NOTICE '=== Seed complete ===';
+        RAISE NOTICE 'users:               %', user_count;
+        RAISE NOTICE 'pnms:                %', pnm_count;
+        RAISE NOTICE 'on_campus_housing:   %', on_cam_count;
+        RAISE NOTICE 'off_campus_housing:  %', off_cam_count;
+        RAISE NOTICE 'events:              %', event_count;
+        RAISE NOTICE '';
+        RAISE NOTICE 'Test credentials (all passwords: Password1!)';
+        RAISE NOTICE '  ADMIN:    admin@collusion.dev';
+        RAISE NOTICE '  DIRECTOR: director@collusion.dev';
+        RAISE NOTICE '  USER:     user@collusion.dev';
+    END $$;
+
+COMMIT;

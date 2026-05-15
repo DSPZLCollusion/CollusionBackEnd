@@ -2,7 +2,6 @@ CREATE OR REPLACE PROCEDURE sp_create_user(
     p_first_name  VARCHAR,
     p_last_name   VARCHAR,
     p_email       VARCHAR,
-    p_salt        VARCHAR,
     p_hash        VARCHAR,
     OUT p_user_id BIGINT
 )
@@ -12,8 +11,8 @@ BEGIN
         RAISE EXCEPTION 'EMAIL_TAKEN: %', p_email;
     END IF;
 
-    INSERT INTO users (first_name, last_name, email, password_salt, password_hash)
-    VALUES (p_first_name, p_last_name, p_email, p_salt, p_hash)
+    INSERT INTO users (first_name, last_name, email, password_hash)
+    VALUES (p_first_name, p_last_name, p_email, p_hash)
     RETURNING id INTO p_user_id;
 END;
 $$;
@@ -47,7 +46,6 @@ $$;
 
 CREATE OR REPLACE PROCEDURE sp_update_user_password(
     p_user_id BIGINT,
-    p_salt    VARCHAR,
     p_hash    VARCHAR
 )
 LANGUAGE plpgsql AS $$
@@ -57,8 +55,7 @@ BEGIN
     END IF;
 
     UPDATE users
-    SET password_salt = p_salt,
-        password_hash = p_hash
+    SET password_hash = p_hash
     WHERE id = p_user_id;
 END;
 $$;
@@ -87,14 +84,12 @@ RETURNS TABLE (
     first_name    VARCHAR,
     last_name     VARCHAR,
     email         VARCHAR,
-    password_salt VARCHAR,
     password_hash VARCHAR
 )
 LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-    SELECT u.id, u.first_name, u.last_name, u.email,
-           u.password_salt, u.password_hash
+    SELECT u.id, u.first_name, u.last_name, u.email, u.password_hash
     FROM users u
     WHERE u.email = p_email;
 END;
